@@ -6,16 +6,15 @@ const TWENTY_ONE = 21;
 const DEALER_LIMIT = 17;
 const SUITS = ['H', 'D', 'S', 'C'];
 const FACECARDS = ['J', 'Q', 'K'];
-const AGAIN_VALUES = ['y', 'n'];
-const MOVE_VALUES = ['h', 's'];
+const AGAIN_VALUES = ['y', 'yes', 'n', 'no'];
+const MOVE_VALUES = ['h', 'hit', 's', 'stay'];
 const MATCH_WINS = 3;
-const AGAIN_RESPONSES = ['y',, 'yes', 'n', 'no'];
 
 //Function Definitions ---------------------------------------------------------
 //Output message
 function prompt(msg) {
   console.log(`=> ${msg}`);
-} 
+}
 
 //Displays divider
 function printDivider() {
@@ -129,7 +128,7 @@ function displayFullHand(hand, handTotal, owner) {
 }
 
 //Display winner
-function displayWinner(dealerHand, dealerTotal, playerHand, playerTotal, score) {
+function displayWinner(dealerHand, dealerTotal, playerHand, playerTotal) {
   printDivider();
   prompt('***Result');
   displayFullHand(dealerHand, dealerTotal, 'dealer');
@@ -137,16 +136,12 @@ function displayWinner(dealerHand, dealerTotal, playerHand, playerTotal, score) 
 
   if (playerTotal > TWENTY_ONE) {
     prompt('***You busted. You lose :(');
-    adjustScore('dealer', score);
   } else if (dealerTotal > TWENTY_ONE) {
     prompt('***Dealer busted. You win!!!!');
-    adjustScore('player', score);
   } else if (dealerTotal > playerTotal) {
     prompt('***Dealer beat you. You lose :(');
-    adjustScore('dealer', score);
   } else if (dealerTotal < playerTotal) {
     prompt('***You beat dealer. You win!!!!');
-    adjustScore('dealer', score);
   } else {
     prompt('***Game was a push');
   }
@@ -158,7 +153,7 @@ function getHandTotal(hand) {
 }
 
 function displayMatchWinner(score) {
-  
+
   if (score[0] === MATCH_WINS) {
     prompt('Player wins overall match!');
   } else if (score[1] === MATCH_WINS) {
@@ -166,11 +161,15 @@ function displayMatchWinner(score) {
   }
 }
 
-function adjustScore (winner, score) {
-  if (winner === 'player') {
-    score[0] += 1;
-  } else if (winner === 'dealer') {
+function adjustScore (dealerTotal, playerTotal, score) {
+  if (playerTotal > TWENTY_ONE) {
     score[1] += 1;
+  } else if (dealerTotal > TWENTY_ONE) {
+    score[0] += 1;
+  } else if (dealerTotal > playerTotal) {
+    score[1] += 1;
+  } else if (dealerTotal < playerTotal) {
+    score[0] += 1;
   }
 }
 
@@ -197,14 +196,14 @@ function playAgain() {
 while (true) {
   console.clear();
   displayWelcomeMessage();
-  
+
   let score = [0, 0];
   printDivider();
   printDivider();
   displayScoreBoard(score);
-  
+
   //Match play
-  while(true) {
+  while (true) {
 
     //Hand play
     while (true) {
@@ -213,45 +212,47 @@ while (true) {
       let dealerHand = [];
       let playerTotal;
       let dealerTotal;
-  
+
       //Shuffle deck
       shuffleDeck(deck);
-  
+
       //Deal initial cards
       dealInitialHands(deck, playerHand, dealerHand);
-  
+
       //Player turn
       while (true) {
         playerTotal = getHandTotal(playerHand);
-  
+
         //If busted, attempt to convert Ace values from 11 to 1
         if (busted(playerTotal)) {
           convertAces(playerHand);
           playerTotal = getHandTotal(playerHand);
         }
-  
+
         //If hand total still more than 21 end player turn
         if (busted(playerTotal)) break;
-  
+
         //Show player the dealer's hand and their current hand
         printDivider();
         displayFirstCard(dealerHand);
         displayFullHand(playerHand, playerTotal, 'player');
-  
+
         //Ask player if they want to stay or hit. Break out of loop if they stay
         let decision = stayOrHit();
         if (decision === 's') break;
-  
+
         //Deal another card
         dealCard(deck, playerHand);
       }
-  
+
       //Check to see if user busted, if so exit hand and tell them dealer won
       if (busted(playerTotal)) {
-        displayWinner(dealerHand, dealerTotal, playerHand, playerTotal, score);
+        displayWinner(dealerHand, dealerTotal, playerHand, playerTotal);
+        //Increment match score accordingly
+        adjustScore(dealerTotal, playerTotal, score);
         break;
       }
-  
+
       //Dealer turn
       while (true) {
         dealerTotal = getHandTotal(dealerHand);
@@ -260,35 +261,37 @@ while (true) {
           convertAces(dealerHand);
           dealerTotal = getHandTotal(dealerHand);
         }
-  
+
         if (dealerLimitReached(dealerTotal)) break;
-  
+
         //Deal another card
         dealCard(deck, dealerHand);
       }
-  
+
       //Check to see if dealer busted, if so exit hand and tell user they won
       if (busted(dealerTotal)) {
-        displayWinner(dealerHand, dealerTotal, playerHand, playerTotal, score);
+        displayWinner(dealerHand, dealerTotal, playerHand, playerTotal);
+        //Increment match score accordingly
+        adjustScore(dealerTotal, playerTotal, score);
         break;
       }
-  
+
       //Display winner if neither player busted
-      displayWinner(dealerHand, dealerTotal, playerHand, playerTotal, score);
+      displayWinner(dealerHand, dealerTotal, playerHand, playerTotal);
+      //Increment match score accordingly
+      adjustScore(dealerTotal, playerTotal, score);
       break;
     }
-    
+
     printDivider();
     printDivider();
-    //Increment score accordingly
-    adjustScore(score);
     //Show current score
     displayScoreBoard(score);
 
     if (score[0] === MATCH_WINS || score[1] === MATCH_WINS) {
       displayMatchWinner(score);
       break;
-    } 
+    }
   }
 
   printDivider();

@@ -14,7 +14,8 @@ const WINNING_COMBOS = [
 ];
 const MATCH_WINS = 3;
 const FIRST_MOVES = ['player', 'computer', 'choose'];
-const AGAIN_RESPONSES = ['y','n'];
+const AGAIN_RESPONSES = ['y',, 'yes', 'n', 'no'];
+const CENTER_SQUARE = 5;
 
 //Define functions -------------------------------------------------------------
 
@@ -93,18 +94,21 @@ function joinOr(arr, separator = ', ', conjunction = 'or') {
 //Selects computer square based on logical flow
 function computerChoosesSquare(board) {
   let randomIndex = Math.floor(Math.random() * getEmptySquares(board).length);
-
-  let square = findAtRiskSquare(board, COMPUTER_MARKER) || //Makes offensive move to win game first
-               findAtRiskSquare(board, HUMAN_MARKER) || //Defends against player winning
-               fiveOpen(board) || //Chooses center space if it's open
-               getEmptySquares(board)[randomIndex]; //Randomly selects open space
+  let offensiveMove = findAtRiskSquare(board, COMPUTER_MARKER);
+  let defensiveMvove = findAtRiskSquare(board, HUMAN_MARKER);
+  let centerMove = fiveOpen(board);
+  let emptyRandomMove = getEmptySquares(board)[randomIndex];
+  let square =  offensiveMove ||
+                defensiveMvove ||
+                centerMove ||
+                emptyRandomMove;
   board[square - 1] = COMPUTER_MARKER;
 }
 
 //Checks if the 5 space is open
 function fiveOpen(board) {
-  if (board[4] === 5) return 5;
-  return undefined;
+  if (board[4] === CENTER_SQUARE) return 5;
+  return null;
 }
 
 //Determines if there is an open space within a winning sequence of 3 spaces
@@ -210,7 +214,10 @@ function collectFirstPlayer() {
   let currentPlayer = '';
 
   while (true) {
-    prompt('Who would you like to go first? Choose one: \n   - You (type "player") \n   - The computer (type "computer") \n   - Choose randomly (type "choose")');
+    prompt('Who would you like to go first? Choose one: \n' +   
+            '   - You (type "player") \n' +   
+            '   - The computer (type "computer") \n' +  
+            '   - Choose randomly (type "choose")');
     currentPlayer = readline.prompt().trim().toLowerCase();
     if (FIRST_MOVES.includes(currentPlayer)) break;
   }

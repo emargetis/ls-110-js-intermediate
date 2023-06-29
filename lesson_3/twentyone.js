@@ -23,7 +23,7 @@ function printDivider() {
 
 function displayWelcomeMessage() {
   prompt('Welcome to 21! First one to 3 win three hands, wins the overall match.' +
-        '\nTo win a hand, stay under 21, but have a higher score than dealer.');
+        '\nTo win a hand, stay under or at 21, but have a higher score than dealer.');
 }
 
 //Create deck of 52 cards
@@ -76,17 +76,28 @@ function dealerLimitReached(handTotal) {
   return handTotal >= DEALER_LIMIT;
 }
 
-function convertAces(hand) {
-  let handTotal = getHandTotal(hand);
-
+function convertAces(hand, handTotal) {
   for (let card = 0; card < hand.length; card++) {
     if (hand[card][0][0] === 'A') {
       hand[card][1] = 1;
-      handTotal = getHandTotal(hand); //recompute hand total
+      handTotal = hand.reduce((sum, card) => sum + card[1], 0); //recompute hand total
     }
 
     if (handTotal <= TWENTY_ONE) break; //hand total less than 21 now break
   }
+}
+
+//return the total of a given hand
+function getHandTotal(hand) {
+  let handTotal = hand.reduce((sum, card) => sum + card[1], 0);
+
+  //If busted, attempt to convert Ace values from 11 to 1
+  if (busted(handTotal)) {
+    convertAces(hand, handTotal);
+    handTotal = hand.reduce((sum, card) => sum + card[1], 0);
+  }
+
+  return handTotal;
 }
 
 //Validate input on if user wants to play again
@@ -147,11 +158,6 @@ function displayWinner(dealerHand, dealerTotal, playerHand, playerTotal) {
   }
 }
 
-//return the total of a given hand
-function getHandTotal(hand) {
-  return hand.reduce((sum, card) => sum + card[1], 0);
-}
-
 function displayMatchWinner(score) {
 
   if (score[0] === MATCH_WINS) {
@@ -192,101 +198,82 @@ function playAgain() {
   return answer;
 }
 
+function playerTurn(deck, playerHand, playerTotal, dealerHand) {
+  //Player turn
+  while (true) {
+    playerTotal = getHandTotal(playerHand);
+
+    //If hand total more than 21 end player turn
+    if (busted(playerTotal)) break;
+
+    //Show player the dealer's hand and their current hand
+    printDivider();
+    displayFirstCard(dealerHand);
+    displayFullHand(playerHand, playerTotal, 'player');
+
+    //Ask player if they want to stay or hit. Break out of loop if they stay
+    let decision = stayOrHit();
+    if (decision === 's') break;
+
+    //Deal another card
+    dealCard(deck, playerHand);
+  }
+
+  return playerTotal;
+}
+
+function dealerTurn(deck, dealerHand, dealerTotal) {
+  //Dealer turn
+  while (true) {
+    dealerTotal = getHandTotal(dealerHand);
+
+    //If hand total more than 21 end player turn
+    if (dealerLimitReached(dealerTotal)) break;
+
+    //Deal another card
+    dealCard(deck, dealerHand);
+  }
+
+  return dealerTotal;
+}
 //Main Program -----------------------------------------------------------------
+//Match play
 while (true) {
   console.clear();
   displayWelcomeMessage();
 
   let score = [0, 0];
-  printDivider();
-  printDivider();
-  displayScoreBoard(score);
 
-  //Match play
+  //Hand play
   while (true) {
-
-    //Hand play
-    while (true) {
-      let deck = initializeDeck();
-      let playerHand = [];
-      let dealerHand = [];
-      let playerTotal;
-      let dealerTotal;
-
-      //Shuffle deck
-      shuffleDeck(deck);
-
-      //Deal initial cards
-      dealInitialHands(deck, playerHand, dealerHand);
-
-      //Player turn
-      while (true) {
-        playerTotal = getHandTotal(playerHand);
-
-        //If busted, attempt to convert Ace values from 11 to 1
-        if (busted(playerTotal)) {
-          convertAces(playerHand);
-          playerTotal = getHandTotal(playerHand);
-        }
-
-        //If hand total still more than 21 end player turn
-        if (busted(playerTotal)) break;
-
-        //Show player the dealer's hand and their current hand
-        printDivider();
-        displayFirstCard(dealerHand);
-        displayFullHand(playerHand, playerTotal, 'player');
-
-        //Ask player if they want to stay or hit. Break out of loop if they stay
-        let decision = stayOrHit();
-        if (decision === 's') break;
-
-        //Deal another card
-        dealCard(deck, playerHand);
-      }
-
-      //Check to see if user busted, if so exit hand and tell them dealer won
-      if (busted(playerTotal)) {
-        displayWinner(dealerHand, dealerTotal, playerHand, playerTotal);
-        //Increment match score accordingly
-        adjustScore(dealerTotal, playerTotal, score);
-        break;
-      }
-
-      //Dealer turn
-      while (true) {
-        dealerTotal = getHandTotal(dealerHand);
-        //If busted, attempt to convert Ace values from 11 to 1
-        if (busted(dealerTotal)) {
-          convertAces(dealerHand);
-          dealerTotal = getHandTotal(dealerHand);
-        }
-
-        if (dealerLimitReached(dealerTotal)) break;
-
-        //Deal another card
-        dealCard(deck, dealerHand);
-      }
-
-      //Check to see if dealer busted, if so exit hand and tell user they won
-      if (busted(dealerTotal)) {
-        displayWinner(dealerHand, dealerTotal, playerHand, playerTotal);
-        //Increment match score accordingly
-        adjustScore(dealerTotal, playerTotal, score);
-        break;
-      }
-
-      //Display winner if neither player busted
-      displayWinner(dealerHand, dealerTotal, playerHand, playerTotal);
-      //Increment match score accordingly
-      adjustScore(dealerTotal, playerTotal, score);
-      break;
-    }
-
     printDivider();
     printDivider();
     //Show current score
     displayScoreBoard(score);
+
+    let deck = initializeDeck();
+    let playerHand = [];
+    let dealerHand = [];
+    let playerTotal;
+    let dealerTotal;
+
+    //Shuffle deck
+    shuffleDeck(deck);
+
+    //Deal initial cards
+    dealInitialHands(deck, playerHand, dealerHand);
+
+    //Player turn
+    playerTotal = playerTurn(deck, playerHand, playerTotal, dealerHand);
+
+    //Dealer turn if player did not bust
+    if (!busted(playerTotal)) {
+      dealerTotal = dealerTurn(deck, dealerHand, dealerTotal);
+    }
+
+    console.clear();
+    displayWinner(dealerHand, dealerTotal, playerHand, playerTotal);
+    adjustScore(dealerTotal, playerTotal, score);
 
     if (score[0] === MATCH_WINS || score[1] === MATCH_WINS) {
       displayMatchWinner(score);
